@@ -3,30 +3,51 @@ from typing import List, Dict, Tuple
 
 class DataPreprocessor:
     @staticmethod
-    def convert_to_string(df: pd.DataFrame) -> pd.DataFrame:
-        """Convert all columns to string type and clean the data"""
-        df_processed = df.copy()
-        for column in df_processed.columns:
-            df_processed[column] = df_processed[column].fillna('')  # Lida com valores nulos
-            df_processed[column] = df_processed[column].astype(str)
-            df_processed[column] = df_processed[column].str.upper()
-            df_processed[column] = df_processed[column].str.strip()
-            df_processed[column] = df_processed[column].str.replace(r'\s+', ' ', regex=True)
-        return df_processed
+    def converter_para_string(df: pd.DataFrame) -> pd.DataFrame:
+        """Converte todas as colunas para string e limpa os dados"""
+        df_processado = df.copy()
+        for coluna in df_processado.columns:
+            df_processado[coluna] = df_processado[coluna].fillna('')
+            df_processado[coluna] = df_processado[coluna].astype(str)
+            df_processado[coluna] = df_processado[coluna].str.upper()
+            df_processado[coluna] = df_processado[coluna].str.strip()
+            df_processado[coluna] = df_processado[coluna].str.replace(r'\s+', ' ', regex=True)
+        return df_processado
 
     @staticmethod
-    def convert_to_date(df: pd.DataFrame, date_columns: List[str], formats: Dict[str, str]) -> pd.DataFrame:
-        """Convert specified columns to a standard date format 'YYYY-MM-DD'"""
-        df_processed = df.copy()
-        for column in date_columns:
-            if column in df_processed.columns:
-                date_format = formats.get(column, '%Y-%m-%d')  # Default format if not specified
-                df_processed[column] = pd.to_datetime(df_processed[column], format=date_format, errors='coerce').dt.strftime('%Y-%m-%d')
-        return df_processed
+    def converter_para_data(df: pd.DataFrame, colunas_data: List[str], formatos: Dict[str, str]) -> pd.DataFrame:
+        """Converte colunas especificadas para o formato de data padrão 'YYYY-MM-DD'"""
+        df_processado = df.copy()
+        for coluna in colunas_data:
+            if coluna in df_processado.columns:
+                formato_data = formatos.get(coluna, '%Y-%m-%d')
+                df_processado[coluna] = pd.to_datetime(df_processado[coluna], format=formato_data, errors='coerce').dt.strftime('%Y-%m-%d')
+        return df_processado
 
     @staticmethod
-    def add_unique_id(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
-        """Add a unique ID column to the dataframe"""
+    def adicionar_id_unico(df: pd.DataFrame, prefixo: str) -> pd.DataFrame:
+        """Adiciona uma coluna de ID único ao dataframe"""
         df = df.copy()
-        df['ID_' + prefix] = [f"{prefix}_{i:06d}" for i in range(len(df))]
+        df['ID_' + prefixo] = [f"{prefixo}_{i:06d}" for i in range(len(df))]
+        return df
+    
+    @staticmethod
+    def limpar_coluna_cpf(df: pd.DataFrame, nome_coluna: str) -> pd.DataFrame:
+        """Remove caracteres não numéricos da coluna de CPF"""
+        df = df.copy()
+        if nome_coluna in df.columns: 
+            df[nome_coluna] = df[nome_coluna].astype(str).str.replace(r'\D', '', regex=True)
+        return df
+
+    @staticmethod
+    def normalizar_colunas_para_conciliacao(df: pd.DataFrame, colunas: List[str]) -> pd.DataFrame:
+        """Normaliza colunas específicas para comparação: remove espaços, pontuação e deixa tudo em maiúsculo"""
+        df = df.copy()
+        for col in colunas:
+            if col in df.columns:
+                df[col] = df[col].astype(str)
+                df[col] = df[col].str.upper()
+                df[col] = df[col].str.strip()
+                df[col] = df[col].str.replace(r'\s+', '', regex=True)
+                df[col] = df[col].str.replace(r'[^\w]', '', regex=True)  # remove pontos, traços, etc.
         return df

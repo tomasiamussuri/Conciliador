@@ -6,24 +6,40 @@ class DataLoader:
     def __init__(self):
         self.preprocessor = DataPreprocessor()
 
-    def load_and_prepare_data(self, file, base_type: str) -> Tuple[pd.DataFrame, str]:
-        """Load and preprocess Excel file"""
+    def carregar_e_preparar_dados(self, arquivo, tipo_base: str) -> Tuple[pd.DataFrame, str]:
+        """Carregar e preprocessar arquivo Excel ou CSV"""
         try:
-            df = pd.read_excel(file)
-            df = self.preprocessor.add_unique_id(df, base_type.upper())
+            nome_arquivo = arquivo.name.lower()
 
-            # Apply transformations based on the base type
-            if base_type.lower() == 'gama':
-                df = self.preprocessor.clean_cpf_column(df, 'cpfusu')
-                df = self.preprocessor.convert_to_date(df, ['data_inicio_vigencia'], {'data_inicio_vigencia': '%Y-%m-%d'})
-            
-            # Convert all columns to string after transformations
-            df = self.preprocessor.convert_to_string(df)
+            # Detecta o tipo de arquivo
+            if nome_arquivo.endswith(".csv"):
+                # Tenta ler como CSV com separador padrão ','
+                try:
+                    df = pd.read_csv(arquivo, encoding='utf-8', sep=',')
+                except Exception:
+                    # Se falhar, tenta como ';'
+                    arquivo.seek(0)
+                    df = pd.read_csv(arquivo, encoding='utf-8', sep=';')
+            else:
+                # Leitura de Excel
+                df = pd.read_excel(arquivo, engine='openpyxl' if nome_arquivo.endswith('.xlsx') else 'xlrd')
 
-            # Add columns for matched IDs
-            df['MATCHED_ID'] = None
-            df['MATCH_RULE'] = None
+            # Adiciona ID único
+            df = self.preprocessor.adicionar_id_unico(df, tipo_base.upper())
+
+            # Pré-processamento específico do tipo B
+            if tipo_base.lower() == 'arquivo_b':
+                df = self.preprocessor.limpar_coluna_cpf(df, 'cpfusu')
+                df = self.preprocessor.converter_para_data(df, ['data_inicio_vigencia'], {'data_inicio_vigencia': '%Y-%m-%d'})
+
+            # Converte tudo para string
+            df = self.preprocessor.converter_para_string(df)
+
+            # Adiciona colunas de correspondência
+            df['ID_CORRESPONDIDO'] = None
+            df['REGRA_CORRESPONDENCIA'] = None
 
             return df, None
+
         except Exception as e:
             return None, str(e)
